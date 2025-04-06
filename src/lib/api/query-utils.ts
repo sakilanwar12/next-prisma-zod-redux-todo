@@ -1,3 +1,9 @@
+  // get pagination
+
+import { TPagination } from "./api-response";
+import { TNullish } from "./common-api.types";
+
+  
 export type TQueryParams = {
     id?: number | TNullish;
     search: string;
@@ -39,13 +45,14 @@ export type TQueryParams = {
     };
   }
   
-  // get pagination
+
+  type CountableModel = {
+    count: (args: unknown) => Promise<number>;
+  };
   
-  import { TPagination } from "@/lib/todo/apiResponse";
-  import { TNullish } from "./common-api-types";
-  
-  export async function getPagination<T>(
-    model: any, 
+
+  export async function getPagination(
+    model: CountableModel, 
     search: string | undefined, 
     searchableFields: string[], 
     page: number, 

@@ -46,13 +46,9 @@ export type TQueryParams = {
   }
   
 
-  type CountableModel = {
-    count: (args: unknown) => Promise<number>;
-  };
-  
 
   export async function getPagination(
-    model: CountableModel, 
+    model: any, 
     search: string | undefined, 
     searchableFields: string[], 
     page: number, 

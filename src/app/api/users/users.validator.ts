@@ -6,3 +6,4 @@ export const userSchema = z.object({
 });
 
 export type TUser = z.infer<typeof userSchema>;
+export const updateUserSchema = userSchema.partial();

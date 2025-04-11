@@ -1,20 +1,28 @@
-import { NextResponse } from "next/server";
-import { updateUserSchema, userSchema } from "./users.validator";
+/*
+ * Todo Crud
+ * Create a Todo
+ * Read a Todo
+ * Update a Todo
+ * Delete a Todo
+ */
+
 import { apiResponse } from "@/lib/api/api-response";
+import { NextResponse } from "next/server";
+import { todosSchema, updateTodoSchema } from "./todos.validator";
+import prisma from "@/lib/api/prisma";
 import {
   getFilters,
   getOrderOptions,
   getPagination,
   handleQueryParams,
 } from "@/lib/api/query-utils";
-import prisma from "@/lib/api/prisma";
 
-// create user
+// create todo
 export async function POST(request: Request) {
   try {
     const data = await request.json();
 
-    const parsedData = userSchema.safeParse(data);
+    const parsedData = todosSchema.safeParse(data);
     if (!parsedData.success) {
       const errorMessages = parsedData.error.errors.map((err) => ({
         message: err.message,
@@ -28,16 +36,24 @@ export async function POST(request: Request) {
         })
       );
     }
-    const user = await prisma.user.create({
-      data: parsedData?.data,
+
+    const { user, ...rest } = parsedData.data;
+
+    const todo = await prisma.todo.create({
+      data: {
+        ...rest,
+        user: {
+          connect: { id: user },
+        },
+      },
     });
 
     return NextResponse.json(
       apiResponse({
         success: true,
         statusCode: 200,
-        message: "User created successfully",
-        data: user,
+        message: "Todo created successfully",
+        data: todo,
       })
     );
   } catch (error: Error | any) {
@@ -52,24 +68,25 @@ export async function POST(request: Request) {
   }
 }
 
-// Update user
+// update todo
+
 export async function PATCH(request: Request) {
   try {
-    const { searchParams } = new URL(request?.url);
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
 
-    const { id } = await handleQueryParams(searchParams);
     if (!id) {
       return NextResponse.json(
         apiResponse({
           success: false,
           statusCode: 400,
-          message: "User ID is required",
+          message: "Todo ID is required",
         })
       );
     }
 
-    const data = await request.json();
-    const parsedData = updateUserSchema.safeParse(data);
+    const json = await request.json();
+    const parsedData = updateTodoSchema.safeParse(json);
 
     if (!parsedData.success) {
       const errorMessages = parsedData.error.errors.map((err) => ({
@@ -85,30 +102,26 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // Prepare data for Prisma
-    const dataToUpdate:any = {};
-    const { name, email } = parsedData.data;
+  
+    const prismaData: any = { ...parsedData.data };
 
-    if (name !== undefined) {
-      dataToUpdate.name = name;
+    if (typeof prismaData.user === "number") {
+      prismaData.user = {
+        connect: { id: prismaData.user },
+      };
     }
 
-    if (email !== undefined) {
-      dataToUpdate.email = email;
-    }
-
-    // Update the user in Prisma
-    const user = await prisma.user.update({
+    const updated = await prisma.todo.update({
       where: { id: Number(id) },
-      data: dataToUpdate,
+      data: prismaData,
     });
 
     return NextResponse.json(
       apiResponse({
         success: true,
         statusCode: 200,
-        message: "User updated successfully",
-        data: user,
+        message: "Todo updated successfully",
+        data: updated,
       })
     );
   } catch (error: Error | any) {
@@ -134,7 +147,7 @@ export async function GET(request: Request) {
     //  get single data
 
     if (id) {
-      const data = await prisma.user.findUnique({
+      const data = await prisma.todo.findUnique({
         where: {
           id,
         },
@@ -143,7 +156,7 @@ export async function GET(request: Request) {
         apiResponse({
           success: true,
           statusCode: 200,
-          message: "User fetched successfully",
+          message: "Todo fetched successfully",
           data,
         })
       );
@@ -152,22 +165,21 @@ export async function GET(request: Request) {
     // get all data
 
     const { field, direction } = getOrderOptions(orderBy, orderDirection, [
-      "name",
-      "email",
+      "title",
       "createdAt",
     ]);
 
-    const data = await prisma.user.findMany({
-      where: getFilters(search, ["name", "email"]),
+    const data = await prisma.todo.findMany({
+      where: getFilters(search, ["title"]),
       orderBy: { [field]: direction },
       skip: (page - 1) * pageSize,
       take: pageSize,
     });
 
     const { pagination } = await getPagination(
-      prisma.user,
+      prisma.todo,
       search,
-      ["name", "email"],
+      ["title"],
       page,
       pageSize
     );
@@ -176,7 +188,7 @@ export async function GET(request: Request) {
       apiResponse({
         success: true,
         statusCode: 200,
-        message: "Users fetched successfully",
+        message: "Todo fetched successfully",
         data,
         pagination,
       })
@@ -209,17 +221,17 @@ export async function DELETE(request: Request) {
         apiResponse({
           success: false,
           statusCode: 400,
-          message: "User id is required",
+          message: "Todo id is required",
           errors: [
             {
-              message: "User id is required",
+              message: "Todo id is required",
             },
           ],
         })
       );
     }
 
-    const data = await prisma.user.delete({
+    const data = await prisma.todo.delete({
       where: {
         id,
       },
@@ -229,8 +241,8 @@ export async function DELETE(request: Request) {
       apiResponse({
         success: true,
         statusCode: 200,
-        message: "User deleted successfully",
-        data,
+        message: "Todo deleted successfully",
+        data:null,
       })
     );
   } catch (error: any) {
@@ -238,7 +250,7 @@ export async function DELETE(request: Request) {
       apiResponse({
         success: false,
         statusCode: 500,
-        message: "Error deleting user",
+        message: "Error deleting todo",
         errors: [
           {
             message: error.message || "An unknown error occurred",

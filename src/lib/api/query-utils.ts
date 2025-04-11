@@ -1,7 +1,7 @@
   // get pagination
 
 import { TPagination } from "./api-response";
-import { TNullish } from "./common-api.types";
+import { TNullish } from "../../app/api/common-api.types";
 
   
 export type TQueryParams = {
